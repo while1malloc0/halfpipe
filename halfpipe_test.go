@@ -9,6 +9,12 @@ import (
 	"github.com/while1malloc0/halfpipe"
 )
 
+type testStep func(context.Context) (context.Context, error)
+
+func (s testStep) Run(ctx context.Context) (context.Context, error) {
+	return s(ctx)
+}
+
 type noOpStep struct{}
 
 func (noop *noOpStep) Run(ctx context.Context) (context.Context, error) {
@@ -60,6 +66,24 @@ func TestCancellationIsRespected(t *testing.T) {
 	cancel()
 	_, err := pipeline.Run(ctx)
 	assert.EqualError(t, err, "context canceled")
+}
+
+func TestContextIsPassedBetweenSteps(t *testing.T) {
+	pipeline := halfpipe.NewPipeline()
+	pipeline.MustAddStep("write to context", testStep(func(ctx context.Context) (context.Context, error) {
+		written := context.WithValue(ctx, "written-to", true)
+		return written, nil
+	}))
+	pipeline.MustAddStep("read from context", testStep(func(ctx context.Context) (context.Context, error) {
+		if !ctx.Value("written-to").(bool) {
+			return nil, errors.New("didn't find expected context value for key written-to")
+		}
+		return ctx, nil
+	}))
+	ctx := context.Background()
+	final, err := pipeline.Run(ctx)
+	assert.Nil(t, err)
+	assert.True(t, final.Value("written-to").(bool))
 }
 
 func TestAddStep(t *testing.T) {
