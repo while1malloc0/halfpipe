@@ -5,9 +5,6 @@ import (
 	"fmt"
 )
 
-// RunFunc is the basic function type that gets invoked as part of a Pipeline
-type RunFunc func(context.Context) (context.Context, error)
-
 // Pipeline is the foundational type of the package. It is responsible for
 // orchestrating the invocation of functions, retrying them if necessary,
 // reporting errors, and ensuring that context cancellation is respected
@@ -64,6 +61,9 @@ func (p *Pipeline) Run(ctx context.Context) (context.Context, error) {
 type PipelineStep interface {
 	Run(context.Context) (context.Context, error)
 }
+
+// RunFunc is the basic function type that gets invoked as part of a Pipeline
+type RunFunc func(context.Context) (context.Context, error)
 
 // SerialPipelineStep is a PipelineStep that invokes a single function
 type SerialPipelineStep struct {
