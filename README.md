@@ -1,2 +1,5 @@
 # halfpipe
-A small Go library for single-process pipelines
+
+Halfpipe is a Go library for orchestrating single-process pipelines.
+
+> Note: under construction
