@@ -53,6 +53,15 @@ func TestBasic_error(t *testing.T) {
 	assert.EqualError(t, err, "test error")
 }
 
+func TestCancellationIsRespected(t *testing.T) {
+	pipeline := halfpipe.NewPipeline()
+	pipeline.MustAddStep("cause an error", &noOpStep{})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := pipeline.Run(ctx)
+	assert.EqualError(t, err, "context canceled")
+}
+
 func TestAddStep(t *testing.T) {
 	subject := halfpipe.NewPipeline()
 	assert.NoError(t, subject.AddStep("step", noop()))

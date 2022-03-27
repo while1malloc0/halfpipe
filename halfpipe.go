@@ -49,6 +49,9 @@ func (p *Pipeline) Steps() []string {
 func (p *Pipeline) Run(ctx context.Context) (context.Context, error) {
 	var err error
 	for _, id := range p.Steps() {
+		if ctx.Err() != nil {
+			return ctx, ctx.Err()
+		}
 		ctx, err = p.steps.keyValues[id].Run(ctx)
 		if err != nil {
 			return ctx, err
