@@ -26,64 +26,64 @@ func noop() halfpipe.PipelineStep {
 }
 
 func TestBasic(t *testing.T) {
-	pipeline := halfpipe.NewPipeline()
+	subject := halfpipe.NewPipeline()
 	tf1 := func(ctx context.Context) (context.Context, error) {
 		return context.WithValue(ctx, "tfcalled1", true), nil
 	}
 	tf2 := func(ctx context.Context) (context.Context, error) {
 		return context.WithValue(ctx, "tfcalled2", true), nil
 	}
-	pipeline.MustAddStep("tf1", &halfpipe.SerialPipelineStep{
+	subject.MustAddStep("tf1", &halfpipe.SerialPipelineStep{
 		Action: tf1,
 	})
-	pipeline.MustAddStep("tf2", &halfpipe.SerialPipelineStep{
+	subject.MustAddStep("tf2", &halfpipe.SerialPipelineStep{
 		Action: tf2,
 	})
 	ctx := context.Background()
-	resultCtx, err := pipeline.Run(ctx)
+	got, err := subject.Run(ctx)
 	assert.Nil(t, err)
-	assert.True(t, resultCtx.Value("tfcalled1").(bool))
-	assert.True(t, resultCtx.Value("tfcalled2").(bool))
+	assert.True(t, got.Value("tfcalled1").(bool))
+	assert.True(t, got.Value("tfcalled2").(bool))
 }
 
 func TestBasic_error(t *testing.T) {
-	pipeline := halfpipe.NewPipeline()
+	subject := halfpipe.NewPipeline()
 	f := func(ctx context.Context) (context.Context, error) {
 		return ctx, errors.New("test error")
 	}
-	pipeline.MustAddStep("cause an error", &halfpipe.SerialPipelineStep{
+	subject.MustAddStep("cause an error", &halfpipe.SerialPipelineStep{
 		Action: f,
 	})
 	ctx := context.Background()
-	_, err := pipeline.Run(ctx)
+	_, err := subject.Run(ctx)
 	assert.EqualError(t, err, "test error")
 }
 
 func TestCancellationIsRespected(t *testing.T) {
-	pipeline := halfpipe.NewPipeline()
-	pipeline.MustAddStep("cause an error", &noOpStep{})
+	subject := halfpipe.NewPipeline()
+	subject.MustAddStep("cause an error", &noOpStep{})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := pipeline.Run(ctx)
+	_, err := subject.Run(ctx)
 	assert.EqualError(t, err, "context canceled")
 }
 
 func TestContextIsPassedBetweenSteps(t *testing.T) {
-	pipeline := halfpipe.NewPipeline()
-	pipeline.MustAddStep("write to context", testStep(func(ctx context.Context) (context.Context, error) {
+	subject := halfpipe.NewPipeline()
+	subject.MustAddStep("write to context", testStep(func(ctx context.Context) (context.Context, error) {
 		written := context.WithValue(ctx, "written-to", true)
 		return written, nil
 	}))
-	pipeline.MustAddStep("read from context", testStep(func(ctx context.Context) (context.Context, error) {
+	subject.MustAddStep("read from context", testStep(func(ctx context.Context) (context.Context, error) {
 		if !ctx.Value("written-to").(bool) {
 			return nil, errors.New("didn't find expected context value for key written-to")
 		}
 		return ctx, nil
 	}))
 	ctx := context.Background()
-	final, err := pipeline.Run(ctx)
+	got, err := subject.Run(ctx)
 	assert.Nil(t, err)
-	assert.True(t, final.Value("written-to").(bool))
+	assert.True(t, got.Value("written-to").(bool))
 }
 
 func TestAddStep(t *testing.T) {
