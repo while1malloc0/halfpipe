@@ -2,6 +2,7 @@ package halfpipe_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +38,19 @@ func TestBasic(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, resultCtx.Value("tfcalled1").(bool))
 	assert.True(t, resultCtx.Value("tfcalled2").(bool))
+}
+
+func TestBasic_error(t *testing.T) {
+	pipeline := halfpipe.NewPipeline()
+	f := func(ctx context.Context) (context.Context, error) {
+		return ctx, errors.New("test error")
+	}
+	pipeline.MustAddStep("cause an error", &halfpipe.SerialPipelineStep{
+		Action: f,
+	})
+	ctx := context.Background()
+	_, err := pipeline.Run(ctx)
+	assert.EqualError(t, err, "test error")
 }
 
 func TestAddStep(t *testing.T) {
